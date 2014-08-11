@@ -75,10 +75,10 @@ yajl_string_encode(const yajl_print_t print,
     print(ctx, (const char *) (str + beg), end - beg);
 }
 
-static void hexToDigit(unsigned int * val, const unsigned char * hex)
+static void hexToDigit(unsigned int * val, const unsigned char * hex, unsigned int l)
 {
     unsigned int i;
-    for (i=0;i<4;i++) {
+    for (i=0;i<l;i++) {
         unsigned char c = hex[i];
         if (c >= 'A') c = (c & ~0x20) - 7;
         c -= '0';
@@ -133,16 +133,24 @@ void yajl_string_decode(yajl_buf buf, const unsigned char * str,
                 case 'f': unescaped = "\f"; break;
                 case 'b': unescaped = "\b"; break;
                 case 't': unescaped = "\t"; break;
+                case 'x': {
+                    unsigned int decimal = 0;
+                    hexToDigit(&decimal, str + ++end, 2);
+                    end++;
+                    Utf32toUtf8(decimal, utf8Buf);
+                    unescaped = utf8Buf;
+                    break;
+                }
                 case 'u': {
                     unsigned int codepoint = 0;
-                    hexToDigit(&codepoint, str + ++end);
+                    hexToDigit(&codepoint, str + ++end, 4);
                     end+=3;
                     /* check if this is a surrogate */
                     if ((codepoint & 0xFC00) == 0xD800) {
                         end++;
                         if (str[end] == '\\' && str[end + 1] == 'u') {
                             unsigned int surrogate = 0;
-                            hexToDigit(&surrogate, str + end + 2);
+                            hexToDigit(&surrogate, str + end + 2, 4);
                             codepoint =
                                 (((codepoint & 0x3F) << 10) | 
                                  ((((codepoint >> 6) & 0xF) + 1) << 16) | 

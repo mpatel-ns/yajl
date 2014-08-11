@@ -1,0 +1,9 @@
+array open '['
+string: 'foo'
+string: 'dead'
+string: 'b'
+string: 'a'
+string: 'r'
+string: 'hello<br>hello'
+array close ']'
+memory leaks:	0

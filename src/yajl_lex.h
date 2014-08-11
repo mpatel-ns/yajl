@@ -70,6 +70,10 @@ void yajl_lex_free(yajl_lexer lexer);
  * however in cases where the entity being lexed spans multiple chunks,
  * the lexer will buffer the entity and the data returned will be
  * a pointer into that buffer.
+ * 
+ * The map_key is used for supporting unquoted key strings. In javascript
+ * json the keys can be unquoted. So if the map_key variable is set then 
+ * the next element we are parsing is a map key.
  *
  * This behavior is abstracted from client code except for the performance
  * implications which require that the client choose a reasonable chunk
@@ -77,7 +81,7 @@ void yajl_lex_free(yajl_lexer lexer);
  */
 yajl_tok yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                       size_t jsonTextLen, size_t * offset,
-                      const unsigned char ** outBuf, size_t * outLen);
+                      const unsigned char ** outBuf, size_t * outLen, int map_key);
 
 /** have a peek at the next token, but don't move the lexer forward */
 yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,

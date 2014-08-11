@@ -142,10 +142,10 @@ static const char charLookupTable[256] =
 /*10*/ IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    ,
 /*18*/ IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    ,
 
-/*20*/ 0      , 0      , NFP|VEC|IJC, 0      , 0      , 0      , 0      , 0      ,
+/*20*/ 0      , 0      , NFP|VEC|IJC, 0      , 0      , 0      , 0      , NFP,
 /*28*/ 0      , 0      , 0      , 0      , 0      , 0      , 0      , VEC    ,
 /*30*/ VHC    , VHC    , VHC    , VHC    , VHC    , VHC    , VHC    , VHC    ,
-/*38*/ VHC    , VHC    , 0      , 0      , 0      , 0      , 0      , 0      ,
+/*38*/ VHC    , VHC    , NFP    , 0      , 0      , 0      , 0      , 0      ,
 
 /*40*/ 0      , VHC    , VHC    , VHC    , VHC    , VHC    , VHC    , 0      ,
 /*48*/ 0      , 0      , 0      , 0      , 0      , 0      , 0      , 0      ,
@@ -266,20 +266,19 @@ yajl_string_scan(const unsigned char * buf, size_t len, int utf8check)
 
 static yajl_tok
 yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
-                size_t jsonTextLen, size_t * offset)
+                size_t jsonTextLen, size_t * offset, unsigned char termChar)
 {
     yajl_tok tok = yajl_tok_error;
     int hasEscapes = 0;
 
     for (;;) {
         unsigned char curChar;
+        const unsigned char * p;
+        size_t len;
 
         /* now jump into a faster scanning routine to skip as much
          * of the buffers as possible */
         {
-            const unsigned char * p;
-            size_t len;
-
             if ((lexer->bufInUse && yajl_buf_len(lexer->buf) &&
                  lexer->bufOff < yajl_buf_len(lexer->buf)))
             {
@@ -300,17 +299,23 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
 
         curChar = readChar(lexer, jsonText, offset);
 
-        /* quote terminates */
-        if (curChar == '"') {
+        /* 
+         * String terminator could be '"' or ''' when it is a quoted string or ':' for a
+         * unquoted key string. The CharLookupTable ':' is set as NFP, when a ':'
+         * is found in a quoted string continue the string scan.
+         */ 
+        if (curChar == termChar) {
             tok = yajl_tok_string;
+            if (termChar == ':') {
+                unreadChar(lexer, offset);
+            }
             break;
-        }
-        /* backslash escapes a set of control chars, */
-        else if (curChar == '\\') {
+        } else if (curChar == '\\') {
+            /* backslash escapes a set of control chars, */
             hasEscapes = 1;
             STR_CHECK_EOF;
 
-            /* special case \u */
+            /* special case \u(unicode escape) and \x(hex escape) */
             curChar = readChar(lexer, jsonText, offset);
             if (curChar == 'u') {
                 unsigned int i = 0;
@@ -325,6 +330,19 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
                         goto finish_string_lex;
                     }
                 }
+            } else if (curChar == 'x') {
+                unsigned int i = 0;
+                
+                for (i=0;i<2;i++) {
+                    STR_CHECK_EOF;
+                    curChar = readChar(lexer, jsonText, offset);
+                    if (!(charLookupTable[curChar] & VHC)) {
+                        /* back up the offending char */
+                        unreadChar(lexer, offset);
+                        lexer->error = yajl_lex_string_invalid_hex_char;
+                        goto finish_string_lex;
+                    }
+                }   
             } else if (!(charLookupTable[curChar] & VEC)) {
                 /* back up to offending char */
                 unreadChar(lexer, offset);
@@ -498,16 +516,19 @@ yajl_lex_comment(yajl_lexer lexer, const unsigned char * jsonText,
 yajl_tok
 yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
              size_t jsonTextLen, size_t * offset,
-             const unsigned char ** outBuf, size_t * outLen)
+             const unsigned char ** outBuf, size_t * outLen, int map_key)
 {
     yajl_tok tok = yajl_tok_error;
     unsigned char c;
     size_t startOffset = *offset;
+    int map_key_str_skip = 0;
 
     *outBuf = NULL;
     *outLen = 0;
 
     for (;;) {
+
+        map_key_str_skip = 0;
         assert(*offset <= jsonTextLen);
 
         if (*offset >= jsonTextLen) {
@@ -540,6 +561,14 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 startOffset++;
                 break;
             case 't': {
+                if (map_key) {
+                    /* start the parsing from the beginning */
+                    unreadChar(lexer, offset);
+                    map_key_str_skip = 1;
+                    tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, ':');
+                    goto lexed;
+                }
                 const char * want = "rue";
                 do {
                     if (*offset >= jsonTextLen) {
@@ -558,6 +587,14 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 goto lexed;
             }
             case 'f': {
+                if (map_key) {
+                    /* start the parsing from the beginning */
+                    unreadChar(lexer, offset);
+                    map_key_str_skip = 1;
+                    tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, ':');
+                    goto lexed;
+                }
                 const char * want = "alse";
                 do {
                     if (*offset >= jsonTextLen) {
@@ -576,6 +613,14 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 goto lexed;
             }
             case 'n': {
+                if (map_key) {
+                    /* start the parsing from the beginning */
+                    unreadChar(lexer, offset);
+                    map_key_str_skip = 1;
+                    tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, ':');
+                    goto lexed;
+                }
                 const char * want = "ull";
                 do {
                     if (*offset >= jsonTextLen) {
@@ -595,9 +640,32 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
             }
             case '"': {
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset);
+                                      jsonTextLen, offset, '"');
                 goto lexed;
             }
+            case '\'': {
+                tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, '\'');
+                goto lexed;
+            }
+            case 'a' ... 'e':
+            case 'g' ... 'm':
+            case 'o' ... 's':
+            case 'u' ... 'z':
+            case 'A' ... 'Z':
+                if (!map_key) {
+                    /* Error condition - support unquoted strings only for map keys */
+                    lexer->error = yajl_lex_invalid_char;
+                    tok = yajl_tok_error;
+                    goto lexed;
+                }
+                /* start the parsing from the beginning */
+                unreadChar(lexer, offset);
+                map_key_str_skip = 1;
+                tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, ':');
+                goto lexed;
+                break;
             case '-':
             case '0': case '1': case '2': case '3': case '4':
             case '5': case '6': case '7': case '8': case '9': {
@@ -665,9 +733,12 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
     /* special case for strings. skip the quotes. */
     if (tok == yajl_tok_string || tok == yajl_tok_string_with_escapes)
     {
-        assert(*outLen >= 2);
-        (*outBuf)++;
-        *outLen -= 2;
+        /* Dont' skip the length and buffer for unquoted key strings */
+        if (!map_key_str_skip) { 
+            assert(*outLen >= 2);
+            (*outBuf)++;
+            *outLen -= 2;
+        }
     }
 
 
@@ -753,7 +824,7 @@ yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
     yajl_tok tok;
 
     tok = yajl_lex_lex(lexer, jsonText, jsonTextLen, &offset,
-                       &outBuf, &outLen);
+                       &outBuf, &outLen, 0);
 
     lexer->bufOff = bufOff;
     lexer->bufInUse = bufInUse;
