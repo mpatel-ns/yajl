@@ -118,4 +118,11 @@ size_t yajl_lex_current_line(yajl_lexer lexer);
  *  \n or \r */
 size_t yajl_lex_current_char(yajl_lexer lexer);
 
+/** read a character from the lexer buffer or the text. */
+unsigned char
+yajl_lex_readChar(yajl_lexer lxr, const unsigned char * jsonText, size_t *offset);
+
+/** unread a character from the lexer buffer or the text */
+void yajl_lex_unreadChar(yajl_lexer lxr, size_t *offset);
+
 #endif

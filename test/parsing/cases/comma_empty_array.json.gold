@@ -1,0 +1,19 @@
+array open '['
+null
+array open '['
+null
+null
+null
+string: 'hello'
+null
+null
+array close ']'
+array open '['
+array close ']'
+array open '['
+string: 'hello'
+string: 'world'
+array close ']'
+null
+array close ']'
+memory leaks:	0

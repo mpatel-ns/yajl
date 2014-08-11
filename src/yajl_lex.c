@@ -100,6 +100,18 @@ struct yajl_lexer_t {
 
 #define unreadChar(lxr, off) ((*(off) > 0) ? (*(off))-- : ((lxr)->bufOff--))
 
+void
+yajl_lex_unreadChar(yajl_lexer lxr, size_t *offset)
+{
+    unreadChar(lxr, offset);
+}
+
+unsigned char
+yajl_lex_readChar(yajl_lexer lxr, const unsigned char * jsonText, size_t *offset)
+{
+    return readChar(lxr, jsonText, offset);
+}
+
 yajl_lexer
 yajl_lex_alloc(yajl_alloc_funcs * alloc,
                unsigned int allowComments, unsigned int validateUTF8)

@@ -342,10 +342,26 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
                         yajl_bs_pop(hand->stateStack);
                         goto around_again;
                     }
+                    else if (yajl_bs_current(hand->stateStack) == yajl_state_array_need_val) {
+                        if (hand->callbacks && hand->callbacks->yajl_null) {
+                            _CC_CHK(hand->callbacks->yajl_null(hand->ctx));
+                        }
+                        yajl_lex_unreadChar(hand->lexer, offset);
+                        break;
+                    }
                     /* intentional fall-through */
                 }
-                case yajl_tok_colon:
                 case yajl_tok_comma:
+                    /* Treat empty comma seperated entries as null */
+                    if (yajl_bs_current(hand->stateStack) == yajl_state_array_start ||
+                        yajl_bs_current(hand->stateStack) == yajl_state_array_need_val) {
+                        if (hand->callbacks && hand->callbacks->yajl_null) {
+                            _CC_CHK(hand->callbacks->yajl_null(hand->ctx));
+                        }
+                        yajl_lex_unreadChar(hand->lexer, offset);
+                        break;
+                    }
+                case yajl_tok_colon:
                 case yajl_tok_right_bracket:
                     yajl_bs_set(hand->stateStack, yajl_state_parse_error);
                     hand->parseError =
