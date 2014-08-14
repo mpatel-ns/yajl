@@ -1,0 +1,15 @@
+array open '['
+string: 'hello'
+string: '&test'
+string: 'te&st&'
+string: 'dead'
+array open '['
+integer: 1
+integer: 5
+string: 'world'
+string: 'nice'
+null
+null
+array close ']'
+array close ']'
+memory leaks:	0

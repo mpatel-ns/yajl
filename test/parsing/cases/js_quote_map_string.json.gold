@@ -1,0 +1,12 @@
+array open '['
+map open '{'
+key: 'key1'
+string: 'hello'
+key: 'key2'
+map open '{'
+key: 'key3'
+string: ''
+map close '}'
+map close '}'
+array close ']'
+memory leaks:	0

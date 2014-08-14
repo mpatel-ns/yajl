@@ -41,6 +41,8 @@ tokToStr(yajl_tok tok)
         case yajl_tok_right_bracket: return "bracket";
         case yajl_tok_string: return "string";
         case yajl_tok_string_with_escapes: return "string_with_escapes";
+        case yajl_tok_string_with_js_quotes: return "string_with_js_quotes";
+        case yajl_tok_string_with_js_quotes_escapes: return "string_with_js_quotes_escapes";
     }
     return "unknown";
 }
@@ -154,7 +156,7 @@ static const char charLookupTable[256] =
 /*10*/ IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    ,
 /*18*/ IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    ,
 
-/*20*/ 0      , 0      , NFP|VEC|IJC, 0      , 0      , 0      , 0      , NFP,
+/*20*/ 0      , 0      , NFP|VEC|IJC, 0  , 0      , 0      , NFP    , NFP    ,
 /*28*/ 0      , 0      , 0      , 0      , 0      , 0      , 0      , VEC    ,
 /*30*/ VHC    , VHC    , VHC    , VHC    , VHC    , VHC    , VHC    , VHC    ,
 /*38*/ VHC    , VHC    , NFP    , 0      , 0      , 0      , 0      , 0      ,
@@ -312,14 +314,31 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
         curChar = readChar(lexer, jsonText, offset);
 
         /* 
-         * String terminator could be '"' or ''' when it is a quoted string or ':' for a
-         * unquoted key string. The CharLookupTable ':' is set as NFP, when a ':'
-         * is found in a quoted string continue the string scan.
-         */ 
+         * Case1: String terminator could be '"' for a double quoted string this is
+         * the standard and RFC conformance case.
+         * Case2: String terminator could be ''' for a single quoted string.
+         * Case3: String terminator could be ':' for unquoted key strings. ':' is set
+         * as NFP in the CharLookupTable. When a ':' is found in a quoted string continue
+         * the string scan.
+         * case4: The string terminator is &quot; javascript apps use this a lot. '&' is
+         * set as NFP in the CharLookupTable. Also, when '&' is found in a quoted string
+         * the string scanning will be continued.
+         */
         if (curChar == termChar) {
             tok = yajl_tok_string;
             if (termChar == ':') {
                 unreadChar(lexer, offset);
+            } else if (termChar == '&') {
+                const char *want = "quot;";
+                do {
+                    STR_CHECK_EOF;
+                    curChar = readChar(lexer, jsonText, offset);
+                    if (curChar != *want) {
+                        lexer->error = yajl_lex_invalid_string;
+                        goto finish_string_lex;
+                    }
+                } while(*(++want));
+                tok = yajl_tok_string_with_js_quotes;
             }
             break;
         } else if (curChar == '\\') {
@@ -388,8 +407,12 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
   finish_string_lex:
     /* tell our buddy, the parser, wether he needs to process this string
      * again */
-    if (hasEscapes && tok == yajl_tok_string) {
-        tok = yajl_tok_string_with_escapes;
+    if (hasEscapes) {
+        if (tok == yajl_tok_string) {
+            tok = yajl_tok_string_with_escapes;
+        } else if (tok == yajl_tok_string_with_js_quotes) {
+            tok = yajl_tok_string_with_js_quotes_escapes;
+        }
     }
 
     return tok;
@@ -650,6 +673,26 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 tok = yajl_tok_null;
                 goto lexed;
             }
+            case '&': {
+                const char *want = "quot;";
+                do {
+                    if (*offset >= jsonTextLen) {
+                        tok = yajl_tok_eof;
+                        goto lexed;
+                    }
+                    c = readChar(lexer, jsonText, offset);
+                    if (c != *want) {
+                        unreadChar(lexer, offset);
+                        lexer->error = yajl_lex_invalid_char;
+                        tok = yajl_tok_error;
+                        goto lexed;
+                    }
+                } while (*(++want));
+
+                tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
+                                      jsonTextLen, offset, '&');
+                goto lexed;
+            }
             case '"': {
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
                                       jsonTextLen, offset, '"');
@@ -751,8 +794,22 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
             (*outBuf)++;
             *outLen -= 2;
         }
+    } else if (tok == yajl_tok_string_with_js_quotes) {
+        /* Skip the start and end &quote; for the js quoted string and rename the token
+         * to just string token as the parser doesn't need to treat it
+         * differently.
+         */
+        *outBuf = *outBuf + 6;
+        *outLen -= 12;
+        tok = yajl_tok_string;
+    } else if (tok == yajl_tok_string_with_js_quotes_escapes) {
+        /* Like the above case skip the js quotes and rename the token to just
+         * string with escapes.
+         */
+        *outBuf = *outBuf + 6;
+        *outLen -= 12;
+        tok = yajl_tok_string_with_escapes;
     }
-
 
 #ifdef YAJL_LEXER_DEBUG
     if (tok == yajl_tok_error) {

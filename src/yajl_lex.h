@@ -40,6 +40,8 @@ typedef enum {
      * and strings that do not */
     yajl_tok_string,
     yajl_tok_string_with_escapes,
+    yajl_tok_string_with_js_quotes,
+    yajl_tok_string_with_js_quotes_escapes,
 
     /* comment tokens are not currently returned to the parser, ever */
     yajl_tok_comment
