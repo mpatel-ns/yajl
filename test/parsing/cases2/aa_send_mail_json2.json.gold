@@ -1,0 +1,289 @@
+map open '{'
+key: '__type'
+string: 'UpdateItemJsonRequest:#Exchange' (11, 31)
+key: 'Header'
+map open '{'
+key: '__type'
+string: 'JsonRequestHeaders:#Exchange' (64, 28)
+key: 'RequestServerVersion'
+string: 'Exchange2015' (118, 12)
+key: 'TimeZoneContext'
+map open '{'
+key: '__type'
+string: 'TimeZoneContext:#Exchange' (161, 25)
+key: 'TimeZoneDefinition'
+map open '{'
+key: '__type'
+string: 'TimeZoneDefinitionType:#Exchange' (220, 32)
+key: 'Id'
+string: 'India Standard Time' (260, 19)
+map close '}'
+map close '}'
+map close '}'
+key: 'Body'
+map open '{'
+key: '__type'
+string: 'UpdateItemRequest:#Exchange' (302, 27)
+key: 'ItemChanges'
+array open '['
+map open '{'
+key: '__type'
+string: 'ItemChange:#Exchange' (357, 20)
+key: 'Updates'
+array open '['
+map open '{'
+key: '__type'
+string: 'DeleteItemField:#Exchange' (401, 25)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'ExtendedPropertyUri:#Exchange' (446, 29)
+key: 'PropertyId'
+integer: 35356
+key: 'DistinguishedPropertySetId'
+string: 'Sharing' (526, 7)
+key: 'PropertyType'
+string: 'CLSID' (551, 5)
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'DeleteItemField:#Exchange' (571, 25)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (616, 21)
+key: 'FieldURI'
+string: 'From' (651, 4)
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (670, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (712, 21)
+key: 'FieldURI'
+string: 'CcRecipients' (747, 12)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (780, 17)
+key: 'CcRecipients'
+array open '['
+array close ']'
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (830, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (872, 21)
+key: 'FieldURI'
+string: 'BccRecipients' (907, 13)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (941, 17)
+key: 'BccRecipients'
+array open '['
+array close ']'
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (992, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (1034, 21)
+key: 'FieldURI'
+string: 'ToRecipients' (1069, 12)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (1102, 17)
+key: 'ToRecipients'
+array open '['
+map open '{'
+key: 'Name'
+string: 'j@w.com' (1146, 7)
+key: 'EmailAddress'
+string: 'j@w.com' (1171, 7)
+key: 'RoutingType'
+string: 'SMTP' (1195, 4)
+key: 'MailboxType'
+string: 'Contact' (1216, 7)
+key: 'ItemId'
+map open '{'
+key: 'ChangeKey'
+null
+key: 'Id'
+string: 'AAMkADVkYWQ0MmViLTllMzQtNDUxYS05ZWEzLWE3ZmUwYzc3MmI1MwBGAAAAAAAWJfuo69RhRYICtgVlrWW0BwDAg9ArclSxSaj02NNBn+w/AAAAAA7MAADAg9ArclSxSaj02NNBn+w/AADzy537AAA=' (1258, 152)
+map close '}'
+key: 'EmailAddressIndex'
+string: 'Email1' (1434, 6)
+key: 'RelevanceScore'
+integer: 3
+map close '}'
+array close ']'
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (1476, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (1518, 21)
+key: 'FieldURI'
+string: 'IsReadReceiptRequested' (1553, 22)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (1596, 17)
+key: 'IsReadReceiptRequested'
+bool: false
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (1659, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (1701, 21)
+key: 'FieldURI'
+string: 'IsDeliveryReceiptRequested' (1736, 26)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (1783, 17)
+key: 'IsDeliveryReceiptRequested'
+bool: false
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (1850, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (1892, 21)
+key: 'FieldURI'
+string: 'Subject' (1927, 7)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (1955, 17)
+key: 'Subject'
+string: 'dd' (1985, 2)
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (2002, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (2044, 21)
+key: 'FieldURI'
+string: 'Importance' (2079, 10)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (2110, 17)
+key: 'Importance'
+string: 'Normal' (2143, 6)
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (2164, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (2206, 21)
+key: 'FieldURI'
+string: 'Body' (2241, 4)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (2266, 17)
+key: 'Body'
+map open '{'
+key: '__type'
+string: 'BodyContentType:#Exchange' (2303, 25)
+key: 'BodyType'
+string: 'HTML' (2342, 4)
+key: 'Value'
+string: '<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style type="text/css" style="display:none;"><!-- P {margin-top:0;margin-bottom:0;} --></style></head><body dir="ltr"><div id="divtagdefaultwrapper" style="font-size:12pt;color:#000000;background-color:#FFFFFF;font-family:Calibri,Arial,Helvetica,sans-serif;"><p><br></p></div></body></html>' (2357, 383)
+map close '}'
+map close '}'
+map close '}'
+map open '{'
+key: '__type'
+string: 'SetItemField:#Exchange' (2756, 22)
+key: 'Path'
+map open '{'
+key: '__type'
+string: 'PropertyUri:#Exchange' (2798, 21)
+key: 'FieldURI'
+string: 'Sensitivity' (2833, 11)
+map close '}'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message:#Exchange' (2865, 17)
+key: 'Sensitivity'
+string: 'Normal' (2899, 6)
+map close '}'
+map close '}'
+array close ']'
+key: 'ItemId'
+map open '{'
+key: '__type'
+string: 'ItemId:#Exchange' (2930, 16)
+key: 'Id'
+string: 'AAMkADVkYWQ0MmViLTllMzQtNDUxYS05ZWEzLWE3ZmUwYzc3MmI1MwBGAAAAAAAWJfuo69RhRYICtgVlrWW0BwDAg9ArclSxSaj02NNBn+w/AAAAAAEQAADAg9ArclSxSaj02NNBn+w/AAEPnRQ4AAA=' (2954, 152)
+key: 'ChangeKey'
+string: 'CQAAABYAAADAg9ArclSxSaj02NNBn+w/AAEPoXcX' (3121, 40)
+map close '}'
+map close '}'
+array close ']'
+key: 'ConflictResolution'
+string: 'AlwaysOverwrite' (3188, 15)
+key: 'ClientSupportsIrm'
+bool: true
+key: 'SendCalendarInvitationsOrCancellations'
+string: 'SendToNone' (3272, 10)
+key: 'MessageDisposition'
+string: 'SendAndSaveCopy' (3306, 15)
+key: 'SuppressReadReceipts'
+bool: false
+key: 'ComposeOperation'
+string: 'newMail' (3372, 7)
+key: 'OutboundCharset'
+string: 'AutoDetect' (3400, 10)
+key: 'PromoteEmojiContentToInlineAttachmentsCount'
+integer: 0
+key: 'UnpromotedInlineImageCount'
+integer: 0
+key: 'PromoteInlineAttachments'
+bool: false
+key: 'SendOnNotFoundError'
+bool: true
+map close '}'
+map close '}'
+memory leaks:	0

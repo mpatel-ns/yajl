@@ -98,6 +98,16 @@ static int test_yajl_string(void *ctx, const unsigned char * stringVal,
     return 1;
 }
 
+static int test_yajl_string2(void *ctx, const unsigned char * stringVal,
+                            size_t stringLen, size_t tokOffset,
+                            size_t tokLen)
+{
+    printf("string: '");
+    fwrite(stringVal, 1, stringLen, stdout);
+    printf("' (%lu, %lu)\n", tokOffset, tokLen);
+    return 1;
+}
+
 static int test_yajl_map_key(void *ctx, const unsigned char * stringVal,
                              size_t stringLen)
 {
@@ -145,8 +155,29 @@ static yajl_callbacks callbacks = {
     test_yajl_map_key,
     test_yajl_end_map,
     test_yajl_start_array,
-    test_yajl_end_array
+    test_yajl_end_array,
+    NULL,
+    NULL,
+    NULL,
 };
+
+static yajl_callbacks callbacks2 = {
+    test_yajl_null,
+    test_yajl_boolean,
+    test_yajl_integer,
+    test_yajl_double,
+    NULL,
+    test_yajl_string,
+    test_yajl_start_map,
+    test_yajl_map_key,
+    test_yajl_end_map,
+    test_yajl_start_array,
+    test_yajl_end_array,
+    NULL,
+    NULL,
+    test_yajl_string2,
+};
+
 
 static void usage(const char * progname)
 {
@@ -160,6 +191,7 @@ static void usage(const char * progname)
             "   -m  allows the parser to consume multiple JSON values\n"
             "       from a single string separated by whitespace\n"
             "   -p  partial JSON documents should not cause errors\n",
+            "   -r  run mode to verify cbs without (mode=1) or with (mode=2) token offset info\n",
             progname);
     exit(1);
 }
@@ -175,6 +207,8 @@ main(int argc, char ** argv)
     yajl_status stat;
     size_t rd;
     int i, j;
+    int opt_c = 0, opt_g = 0, opt_m = 0, opt_p = 0;
+    int mode = 1;
 
     /* memory allocation debugging: allocate a structure which collects
      * statistics */
@@ -191,39 +225,69 @@ main(int argc, char ** argv)
 
     allocFuncs.ctx = (void *) &memCtx;
 
-    /* allocate the parser */
-    hand = yajl_alloc(&callbacks, &allocFuncs, NULL);
-
     /* check arguments.  We expect exactly one! */
     for (i=1;i<argc;i++) {
         if (!strcmp("-c", argv[i])) {
-            yajl_config(hand, yajl_allow_comments, 1);
-        } else if (!strcmp("-b", argv[i])) {
-            if (++i >= argc) usage(argv[0]);
+            opt_c = 1;
+        } else if (!strcmp("-b", argv[i]) || !strcmp("-r", argv[i])) {
+            if (i+1 >= argc) usage(argv[0]);
 
             /* validate integer */
-            for (j=0;j<(int)strlen(argv[i]);j++) {
-                if (argv[i][j] <= '9' && argv[i][j] >= '0') continue;
+            for (j=0;j<(int)strlen(argv[i+1]);j++) {
+                if (argv[i+1][j] <= '9' && argv[i+1][j] >= '0') continue;
                 fprintf(stderr, "-b requires an integer argument.  '%s' "
-                        "is invalid\n", argv[i]);
+                        "is invalid\n", argv[i+1]);
                 usage(argv[0]);
             }
 
-            bufSize = atoi(argv[i]);
-            if (!bufSize) {
-                fprintf(stderr, "%zu is an invalid buffer size\n",
-                        bufSize);
+            if (!strcmp("-b", argv[i])) {
+                ++i;
+                bufSize = atoi(argv[i]);
+                if (!bufSize) {
+                    fprintf(stderr, "%zu is an invalid buffer size\n",
+                            bufSize);
+                    return -1;
+                }
+            } else {
+                ++i;
+                mode = atoi(argv[i]);
+                if (mode != 1 && mode != 2) {
+                    fprintf(stderr, "%zu is an invalid mode\n",
+                            mode);
+                    mode = 1;
+                }
             }
         } else if (!strcmp("-g", argv[i])) {
-            yajl_config(hand, yajl_allow_trailing_garbage, 1);
+            opt_g = 1;
         } else if (!strcmp("-m", argv[i])) {
-            yajl_config(hand, yajl_allow_multiple_values, 1);
+            opt_m = 1;
         } else if (!strcmp("-p", argv[i])) {
-            yajl_config(hand, yajl_allow_partial_values, 1);
+            opt_p = 1;
         } else {
             fileName = argv[i];
             break;
         }
+    }
+
+    if (mode == 1) {
+        /* allocate the parser */
+        hand = yajl_alloc(&callbacks, &allocFuncs, NULL);
+    } else {
+        /* allocate the parser */
+        hand = yajl_alloc(&callbacks2, &allocFuncs, NULL);
+    }
+
+    if (opt_c) {
+        yajl_config(hand, yajl_allow_comments, 1);
+    }
+    if (opt_g) {
+        yajl_config(hand, yajl_allow_trailing_garbage, 1);
+    }
+    if (opt_m) {
+        yajl_config(hand, yajl_allow_multiple_values, 1);
+    }
+    if (opt_p) {
+        yajl_config(hand, yajl_allow_partial_values, 1);
     }
 
     fileData = (unsigned char *) malloc(bufSize);

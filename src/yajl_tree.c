@@ -415,7 +415,10 @@ yajl_val yajl_tree_parse (const char *input,
             /* map key     = */ handle_string,
             /* end map     = */ handle_end_map,
             /* start array = */ handle_start_array,
-            /* end array   = */ handle_end_array
+            /* end array   = */ handle_end_array,
+            /* integer2    = */ NULL,
+            /* number2     = */ NULL,
+            /* string2     = */ NULL
         };
 
     yajl_handle handle;

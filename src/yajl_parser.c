@@ -154,6 +154,29 @@ yajl_render_error_string(yajl_handle hand, const unsigned char * jsonText,
         return yajl_status_client_canceled;                       \
     }
 
+/* call appropriate callbacks for string, number and integer */
+#define _CB_STRING(hand, v, vl, t_o, t_l)                             \
+    if ((hand)->callbacks && (hand)->callbacks->yajl_string2) {       \
+        _CC_CHK((hand)->callbacks->yajl_string2((hand)->ctx, v,       \
+                    vl, t_o, t_l));                                   \
+    } else if ((hand)->callbacks && (hand)->callbacks->yajl_string) { \
+        _CC_CHK((hand)->callbacks->yajl_string((hand)->ctx, v, vl));  \
+    }
+
+#define _CB_NUMBER(hand, v, vl, t_o)                             \
+    if ((hand)->callbacks && (hand)->callbacks->yajl_number2) {       \
+        _CC_CHK((hand)->callbacks->yajl_number2((hand)->ctx, v,       \
+                    vl, t_o));                                   \
+    } else if ((hand)->callbacks && (hand)->callbacks->yajl_number) { \
+        _CC_CHK((hand)->callbacks->yajl_number((hand)->ctx, v, vl));  \
+    }
+
+#define _CB_INTEGER(hand, v, t_o)                                       \
+    if ((hand)->callbacks && (hand)->callbacks->yajl_integer2) {        \
+        _CC_CHK((hand)->callbacks->yajl_integer2((hand)->ctx, v, t_o)); \
+    } else if ((hand)->callbacks && (hand)->callbacks->yajl_integer) {  \
+        _CC_CHK((hand)->callbacks->yajl_integer((hand)->ctx, v));       \
+    }
 
 yajl_status
 yajl_do_finish(yajl_handle hand)
@@ -239,19 +262,19 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
                     yajl_bs_set(hand->stateStack, yajl_state_lexical_error);
                     goto around_again;
                 case yajl_tok_string:
-                    if (hand->callbacks && hand->callbacks->yajl_string) {
-                        _CC_CHK(hand->callbacks->yajl_string(hand->ctx,
-                                                             buf, bufLen));
-                    }
+                    _CB_STRING(hand, buf, bufLen, yajl_get_tokOff(hand->lexer), bufLen)
+                    // Do I need to reset tok offet
                     break;
                 case yajl_tok_string_with_escapes:
-                    if (hand->callbacks && hand->callbacks->yajl_string) {
+                    if (hand->callbacks && (hand->callbacks->yajl_string2 ||
+                                hand->callbacks->yajl_string)) {
                         yajl_buf_clear(hand->decodeBuf);
                         yajl_string_decode(hand->decodeBuf, buf, bufLen);
-                        _CC_CHK(hand->callbacks->yajl_string(
-                                    hand->ctx, yajl_buf_data(hand->decodeBuf),
-                                    yajl_buf_len(hand->decodeBuf)));
+                        _CB_STRING(hand, yajl_buf_data(hand->decodeBuf),
+                                yajl_buf_len(hand->decodeBuf), yajl_get_tokOff(hand->lexer),
+                                bufLen)
                     }
+                    // Do I need to reset tok offet
                     break;
                 case yajl_tok_bool:
                     if (hand->callbacks && hand->callbacks->yajl_boolean) {
@@ -278,10 +301,11 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
                     break;
                 case yajl_tok_integer:
                     if (hand->callbacks) {
-                        if (hand->callbacks->yajl_number) {
-                            _CC_CHK(hand->callbacks->yajl_number(
-                                        hand->ctx,(const char *) buf, bufLen));
-                        } else if (hand->callbacks->yajl_integer) {
+                        if (hand->callbacks->yajl_number || hand->callbacks->yajl_number2 ) {
+                            _CB_NUMBER(hand, (const char *) buf, bufLen,
+                                    yajl_get_tokOff(hand->lexer));
+                        } else if (hand->callbacks->yajl_integer || 
+                                hand->callbacks->yajl_integer2) {
                             long long int i = 0;
                             errno = 0;
                             i = yajl_parse_integer(buf, bufLen);
@@ -296,16 +320,16 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
                                 else *offset = 0;
                                 goto around_again;
                             }
-                            _CC_CHK(hand->callbacks->yajl_integer(hand->ctx,
-                                                                  i));
+                            _CB_INTEGER(hand, i, yajl_get_tokOff(hand->lexer));
                         }
                     }
                     break;
                 case yajl_tok_double:
                     if (hand->callbacks) {
-                        if (hand->callbacks->yajl_number) {
-                            _CC_CHK(hand->callbacks->yajl_number(
-                                        hand->ctx, (const char *) buf, bufLen));
+                        if (hand->callbacks->yajl_number ||
+                                hand->callbacks->yajl_number2) {
+                            _CB_NUMBER(hand, (const char *)buf, bufLen, 
+                                    yajl_get_tokOff(hand->lexer));
                         } else if (hand->callbacks->yajl_double) {
                             double d = 0.0;
                             yajl_buf_clear(hand->decodeBuf);

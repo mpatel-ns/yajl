@@ -89,6 +89,9 @@ yajl_tok yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
 yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
                        size_t jsonTextLen, size_t offset);
 
+void yajl_add_to_totalOff(yajl_lexer lexer, size_t offset);
+
+size_t yajl_get_tokOff(yajl_lexer lexer);
 
 typedef enum {
     yajl_lex_e_ok = 0,

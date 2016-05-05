@@ -1,0 +1,9 @@
+map open '{'
+key: 'this'
+string: 'is' (13, 2)
+key: 'really'
+string: 'simple' (46, 6)
+key: 'json'
+string: 'right?' (109, 6)
+map close '}'
+memory leaks:	0

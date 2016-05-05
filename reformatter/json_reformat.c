@@ -101,7 +101,8 @@ static yajl_callbacks callbacks = {
     reformat_map_key,
     reformat_end_map,
     reformat_start_array,
-    reformat_end_array
+    reformat_end_array,
+    NULL
 };
 
 static void

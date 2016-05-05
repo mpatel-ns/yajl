@@ -48,6 +48,8 @@ tokToStr(yajl_tok tok)
 }
 #endif
 
+#define TOKOFF_DEBUG    0
+
 /* Impact of the stream parsing feature on the lexer:
  *
  * YAJL support stream parsing.  That is, the ability to parse the first
@@ -91,6 +93,14 @@ struct yajl_lexer_t {
 
     /* shall we validate utf8 inside strings? */
     unsigned int validateUTF8;
+
+    /* offset of current token from start of first lexer call */
+    size_t  tokOff;
+
+    /* this is overall offset from start of JSON. If mutiple calls were
+     * made it will be cumulative value buff sizes seen so far (except 
+     * the last one). For first call it is 0 */
+    size_t  totalOff;
 
     yajl_alloc_funcs * alloc;
 };
@@ -554,7 +564,7 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
              const unsigned char ** outBuf, size_t * outLen, int map_key)
 {
     yajl_tok tok = yajl_tok_error;
-    unsigned char c;
+    unsigned char c = 0;
     size_t startOffset = *offset;
     int map_key_str_skip = 0;
 
@@ -763,17 +773,31 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 tok = yajl_tok_error;
                 goto lexed;
         }
+        lexer->tokOff = 0;
     }
 
 
   lexed:
     /* need to append to buffer if the buffer is in use or
      * if it's an EOF token */
-    if (tok == yajl_tok_eof || lexer->bufInUse) {
-        if (!lexer->bufInUse) yajl_buf_clear(lexer->buf);
+#if TOKOFF_DEBUG
+    if (tok == yajl_tok_string) printf("1: tokOff: %lu, tok:%d\n", lexer->tokOff, tok);
+#endif
+    if ((tok == yajl_tok_eof && *offset > startOffset) || lexer->bufInUse ) {
+        if (!lexer->bufInUse) {
+            yajl_buf_clear(lexer->buf);
+            if (startOffset < jsonTextLen) lexer->tokOff = lexer->totalOff + startOffset;
+#if TOKOFF_DEBUG
+            printf("2: totalOff: %lu, startOffset: %lu, tokOff: %lu, tok:%d\n",
+                    lexer->totalOff, startOffset, lexer->tokOff, tok);
+#endif
+        }
         lexer->bufInUse = 1;
         yajl_buf_append(lexer->buf, jsonText + startOffset, *offset - startOffset);
         lexer->bufOff = 0;
+        if (!lexer->tokOff && (startOffset < jsonTextLen)) {
+            lexer->tokOff = lexer->totalOff + startOffset;
+        }
 
         if (tok != yajl_tok_eof) {
             *outBuf = yajl_buf_data(lexer->buf);
@@ -783,7 +807,14 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
     } else if (tok != yajl_tok_error) {
         *outBuf = jsonText + startOffset;
         *outLen = *offset - startOffset;
+        lexer->tokOff = lexer->totalOff + startOffset;
+#if TOKOFF_DEBUG
+        printf("3: tokOff: %lu, tok:%d\n", lexer->tokOff, tok);
+#endif
     }
+#if TOKOFF_DEBUG
+    if (tok == yajl_tok_string) printf("4: tokOff: %lu\n", lexer->tokOff);
+#endif
 
     /* special case for strings. skip the quotes. */
     if (tok == yajl_tok_string || tok == yajl_tok_string_with_escapes)
@@ -793,6 +824,10 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
             assert(*outLen >= 2);
             (*outBuf)++;
             *outLen -= 2;
+            lexer->tokOff += 1;
+#if TOKOFF_DEBUG
+            printf("5: tokOff: %lu\n", lexer->tokOff);
+#endif
         }
     } else if (tok == yajl_tok_string_with_js_quotes) {
         /* Skip the start and end &quote; for the js quoted string and rename the token
@@ -802,6 +837,7 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
         *outBuf = *outBuf + 6;
         *outLen -= 12;
         tok = yajl_tok_string;
+        lexer->tokOff += 6;
     } else if (tok == yajl_tok_string_with_js_quotes_escapes) {
         /* Like the above case skip the js quotes and rename the token to just
          * string with escapes.
@@ -809,7 +845,11 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
         *outBuf = *outBuf + 6;
         *outLen -= 12;
         tok = yajl_tok_string_with_escapes;
+        lexer->tokOff += 6;
     }
+#if TOKOFF_DEBUG
+    if (tok == yajl_tok_string) printf("6: tokOff: %lu\n", lexer->tokOff);
+#endif
 
 #ifdef YAJL_LEXER_DEBUG
     if (tok == yajl_tok_error) {
@@ -901,3 +941,14 @@ yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
 
     return tok;
 }
+
+void yajl_add_to_totalOff(yajl_lexer lexer, size_t offset)
+{
+    lexer->totalOff += offset;
+}
+
+size_t yajl_get_tokOff(yajl_lexer lexer)
+{
+    return lexer->tokOff;
+}
+

@@ -1,0 +1,32 @@
+map open '{'
+key: 'Body'
+map open '{'
+key: 'ItemChanges'
+array open '['
+map open '{'
+key: 'Updates'
+array open '['
+map open '{'
+key: 'Item'
+map open '{'
+key: '__type'
+string: 'Message' (55, 7)
+key: 'Body'
+map open '{'
+key: '__type'
+string: 'BodyContentType' (82, 15)
+key: 'BodyType'
+string: 'HTML' (111, 4)
+key: 'Value'
+string: 'This is a simple content for test' (126, 33)
+map close '}'
+map close '}'
+map close '}'
+array close ']'
+key: 'ConflictResolution'
+string: 'AlwaysOverwrite' (187, 15)
+map close '}'
+array close ']'
+map close '}'
+map close '}'
+memory leaks:	0

@@ -128,6 +128,8 @@ yajl_parse(yajl_handle hand, const unsigned char * jsonText,
     }
 
     status = yajl_do_parse(hand, jsonText, jsonTextLen);
+    yajl_add_to_totalOff(hand->lexer, jsonTextLen);
+    //printf("Added %lu bytes to totalOff\n", jsonTextLen);
     return status;
 }
 
