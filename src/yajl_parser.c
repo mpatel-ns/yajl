@@ -226,7 +226,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
             if (!(hand->flags & yajl_allow_trailing_garbage)) {
                 if (*offset != jsonTextLen) {
                     tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                                       offset, &buf, &bufLen, 0);
+                                       offset, &buf, &bufLen, 0,
+                                       hand->flags & yajl_disable_string_optimization);
                     if (tok != yajl_tok_eof) {
                         yajl_bs_set(hand->stateStack, yajl_state_parse_error);
                         hand->parseError = "trailing garbage";
@@ -253,7 +254,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
             yajl_state stateToPush = yajl_state_start;
 
             tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                               offset, &buf, &bufLen, 0);
+                               offset, &buf, &bufLen, 0,
+                               hand->flags & yajl_disable_string_optimization);
 
             switch (tok) {
                 case yajl_tok_eof:
@@ -419,7 +421,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
              * start '}' is valid, whereas in need_key, we've parsed
              * a comma, and a string key _must_ follow */
             tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                               offset, &buf, &bufLen, 1);
+                               offset, &buf, &bufLen, 1,
+                               hand->flags & yajl_disable_string_optimization);
             switch (tok) {
                 case yajl_tok_eof:
                     return yajl_status_ok;
@@ -460,7 +463,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
         }
         case yajl_state_map_sep: {
             tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                               offset, &buf, &bufLen, 0);
+                               offset, &buf, &bufLen, 0,
+                               hand->flags & yajl_disable_string_optimization);
             switch (tok) {
                 case yajl_tok_colon:
                     yajl_bs_set(hand->stateStack, yajl_state_map_need_val);
@@ -479,7 +483,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
         }
         case yajl_state_map_got_val: {
             tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                               offset, &buf, &bufLen, 0);
+                               offset, &buf, &bufLen, 0,
+                               hand->flags & yajl_disable_string_optimization);
             switch (tok) {
                 case yajl_tok_right_bracket:
                     if (hand->callbacks && hand->callbacks->yajl_end_map) {
@@ -507,7 +512,8 @@ yajl_do_parse(yajl_handle hand, const unsigned char * jsonText,
         }
         case yajl_state_array_got_val: {
             tok = yajl_lex_lex(hand->lexer, jsonText, jsonTextLen,
-                               offset, &buf, &bufLen, 0);
+                               offset, &buf, &bufLen, 0,
+                               hand->flags & yajl_disable_string_optimization);
             switch (tok) {
                 case yajl_tok_right_brace:
                     if (hand->callbacks && hand->callbacks->yajl_end_array) {

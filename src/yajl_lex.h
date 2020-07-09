@@ -83,11 +83,13 @@ void yajl_lex_free(yajl_lexer lexer);
  */
 yajl_tok yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                       size_t jsonTextLen, size_t * offset,
-                      const unsigned char ** outBuf, size_t * outLen, int map_key);
+                      const unsigned char ** outBuf, size_t * outLen, int map_key,
+                      int isStringOptimizationDisabled);
 
 /** have a peek at the next token, but don't move the lexer forward */
 yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
-                       size_t jsonTextLen, size_t offset);
+                       size_t jsonTextLen, size_t offset,
+                       int isStringOptimizationDisabled);
 
 void yajl_add_to_totalOff(yajl_lexer lexer, size_t offset);
 

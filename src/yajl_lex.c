@@ -85,6 +85,15 @@ struct yajl_lexer_t {
      * the current offset into the lexBuf. */
     size_t bufOff;
 
+    /* we will store position for last proceed location. This will help us
+       in continuing from the same location if token is not complete with
+       current buffer */
+    unsigned int processed_till;
+    /* Since we have applied optimization to start from last processed location,
+       we need to save hasEscapes value since in current buffer, it may not be
+       available but it was there in previous processed buffer */
+    int hasEscapes;
+
     /* are we using the lex buf? */
     unsigned int bufInUse;
 
@@ -290,10 +299,19 @@ yajl_string_scan(const unsigned char * buf, size_t len, int utf8check)
 
 static yajl_tok
 yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
-                size_t jsonTextLen, size_t * offset, unsigned char termChar)
+                size_t jsonTextLen, size_t * offset, unsigned char termChar,
+                int isStringOptimizationDisabled)
 {
     yajl_tok tok = yajl_tok_error;
+
     int hasEscapes = 0;
+
+    /* if we have allready proceed some data and we have not got full token, 
+       we will continue from that location only */
+    if (!isStringOptimizationDisabled && lexer->processed_till > 0) {
+        lexer->bufOff = lexer->processed_till;
+        hasEscapes = lexer->hasEscapes;
+    }
 
     for (;;) {
         unsigned char curChar;
@@ -310,12 +328,17 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
                      (lexer->bufOff));
                 len = yajl_buf_len(lexer->buf) - lexer->bufOff;
                 lexer->bufOff += yajl_string_scan(p, len, lexer->validateUTF8);
+                /* setting processed_till with current offset value */
+                lexer->processed_till = lexer->bufOff;
             }
             else if (*offset < jsonTextLen)
             {
                 p = jsonText + *offset;
                 len = jsonTextLen - *offset;
                 *offset += yajl_string_scan(p, len, lexer->validateUTF8);
+                /* setting processed till with current offset value + buffer 
+                  offset value */
+                lexer->processed_till = lexer->bufOff + *offset;
             }
         }
 
@@ -423,6 +446,16 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
         } else if (tok == yajl_tok_string_with_js_quotes) {
             tok = yajl_tok_string_with_js_quotes_escapes;
         }
+    }
+
+    /* setting hasEscapes state to lexer */
+    lexer->hasEscapes = hasEscapes;
+    if (yajl_tok_eof != tok)
+    {
+        /* If we are not at end of buffer, we found some valid token, so we can
+           reset processed_till and hasEscapes */
+        lexer->processed_till = 0;
+        lexer->hasEscapes = 0;
     }
 
     return tok;
@@ -561,7 +594,8 @@ yajl_lex_comment(yajl_lexer lexer, const unsigned char * jsonText,
 yajl_tok
 yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
              size_t jsonTextLen, size_t * offset,
-             const unsigned char ** outBuf, size_t * outLen, int map_key)
+             const unsigned char ** outBuf, size_t * outLen, int map_key,
+             int isStringOptimizationDisabled)
 {
     yajl_tok tok = yajl_tok_error;
     unsigned char c = 0;
@@ -611,7 +645,8 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                     unreadChar(lexer, offset);
                     map_key_str_skip = 1;
                     tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, ':');
+                                      jsonTextLen, offset, ':',
+                                      isStringOptimizationDisabled);
                     goto lexed;
                 }
                 const char * want = "rue";
@@ -637,7 +672,8 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                     unreadChar(lexer, offset);
                     map_key_str_skip = 1;
                     tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, ':');
+                                      jsonTextLen, offset, ':',
+                                      isStringOptimizationDisabled);
                     goto lexed;
                 }
                 const char * want = "alse";
@@ -663,7 +699,8 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                     unreadChar(lexer, offset);
                     map_key_str_skip = 1;
                     tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, ':');
+                                      jsonTextLen, offset, ':',
+                                      isStringOptimizationDisabled);
                     goto lexed;
                 }
                 const char * want = "ull";
@@ -700,17 +737,20 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 } while (*(++want));
 
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, '&');
+                                      jsonTextLen, offset, '&',
+                                      isStringOptimizationDisabled);
                 goto lexed;
             }
             case '"': {
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, '"');
+                                      jsonTextLen, offset, '"',
+                                      isStringOptimizationDisabled);
                 goto lexed;
             }
             case '\'': {
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, '\'');
+                                      jsonTextLen, offset, '\'',
+                                      isStringOptimizationDisabled);
                 goto lexed;
             }
             case 'a' ... 'e':
@@ -728,7 +768,8 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 unreadChar(lexer, offset);
                 map_key_str_skip = 1;
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
-                                      jsonTextLen, offset, ':');
+                                      jsonTextLen, offset, ':',
+                                      isStringOptimizationDisabled);
                 goto lexed;
                 break;
             case '-':
@@ -815,6 +856,17 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
 #if TOKOFF_DEBUG
     if (tok == yajl_tok_string) printf("4: tokOff: %lu\n", lexer->tokOff);
 #endif
+
+    if (lexer->processed_till > 0) {
+        /* if processed_till >= startOffset, we have allready removed some chars
+           from processing. So we need to remove that from processed_till */
+        if (lexer->processed_till >= startOffset) {
+            lexer->processed_till -= startOffset;
+        }
+        else {
+            lexer->processed_till = 0;
+        }
+    }
 
     /* special case for strings. skip the quotes. */
     if (tok == yajl_tok_string || tok == yajl_tok_string_with_escapes)
@@ -923,7 +975,8 @@ size_t yajl_lex_current_char(yajl_lexer lexer)
 }
 
 yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
-                       size_t jsonTextLen, size_t offset)
+                       size_t jsonTextLen, size_t offset,
+                       int isStringOptimizationDisabled)
 {
     const unsigned char * outBuf;
     size_t outLen;
@@ -933,7 +986,7 @@ yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
     yajl_tok tok;
 
     tok = yajl_lex_lex(lexer, jsonText, jsonTextLen, &offset,
-                       &outBuf, &outLen, 0);
+                       &outBuf, &outLen, 0, isStringOptimizationDisabled);
 
     lexer->bufOff = bufOff;
     lexer->bufInUse = bufInUse;
